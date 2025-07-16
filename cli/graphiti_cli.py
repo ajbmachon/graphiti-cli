@@ -13,30 +13,28 @@ from .utils.client import ClientContext
 load_dotenv()
 
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
-@click.option('--neo4j-uri', envvar='NEO4J_URI', default='bolt://localhost:7687', help='Neo4j connection URI')
-@click.option('--neo4j-user', envvar='NEO4J_USER', default='neo4j', help='Neo4j username')
-@click.option('--neo4j-password', envvar='NEO4J_PASSWORD', help='Neo4j password (required)')
 @click.option('--debug/--no-debug', default=False, help='Enable debug output')
 @click.pass_context
-def cli(ctx, neo4j_uri, neo4j_user, neo4j_password, debug):
+def cli(ctx, debug):
     """
     Graphiti CLI provides direct access to knowledge graph operations.
     
-    Set NEO4J_PASSWORD and OPENAI_API_KEY environment variables before use.
+    Required environment variables:
+    - NEO4J_PASSWORD (required)
+    - OPENAI_API_KEY (recommended)
+    
+    Optional environment variables:
+    - NEO4J_URI (default: bolt://localhost:7687)
+    - NEO4J_USER (default: neo4j)
     """
-    if not neo4j_password:
-        click.echo("Error: NEO4J_PASSWORD environment variable or --neo4j-password required", err=True)
+    if not os.environ.get('NEO4J_PASSWORD'):
+        click.echo("Error: NEO4J_PASSWORD environment variable is required", err=True)
         sys.exit(1)
     
     if not os.environ.get('OPENAI_API_KEY'):
         click.echo("Warning: OPENAI_API_KEY not set, some operations may fail", err=True)
     
-    ctx.obj = ClientContext(
-        uri=neo4j_uri,
-        user=neo4j_user,
-        password=neo4j_password,
-        debug=debug
-    )
+    ctx.obj = ClientContext(debug=debug)
 
 # Register command groups
 cli.add_command(search.search_group)

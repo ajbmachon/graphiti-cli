@@ -28,8 +28,8 @@ Component, Pattern, Workflow, Project, Insight, Requirement, Procedure, Preferen
 BELONGS_TO_PROJECT, DEPENDS_ON, ImplementsPattern, LEADS_TO_INSIGHT, VALIDATES, TRIGGERS_LIMITATION, COORDINATES_WITH, ANALYZES_COMPONENT, EVOLVES_FROM, APPLIES_TO, FOLLOWS_WORKFLOW, PRECEDES_IN_WORKFLOW, DOCUMENTS, REFERENCES
 
 ### Temporal Options
-- --created-after "24 hours ago" or "2024-01-15"
-- --created-before "2024-12-31"
+- --created-after "2025-01-15" or "2025-01-15T10:00:00" (ISO-8601 format only)
+- --created-before "2025-12-31" or "2025-12-31T23:59:59"
 - --order newest/oldest/relevance
 
 ### Search Options
@@ -46,13 +46,13 @@ BELONGS_TO_PROJECT, DEPENDS_ON, ImplementsPattern, LEADS_TO_INSIGHT, VALIDATES, 
 ## EXAMPLES
 
 Natural language query: show me recent changes
-graphiti search temporal "" --created-after "24 hours ago" --order newest
+graphiti search temporal "" --created-after "2025-07-16" --order newest
 
 Natural language query: find authentication components
 graphiti search "authentication" --entity-types Component
 
 Natural language query: what changed last week in the payment system?
-graphiti search temporal "payment" --created-after "7 days ago" --order newest
+graphiti search temporal "payment" --created-after "2025-07-10" --order newest
 
 Natural language query: show dependencies of UserService
 graphiti search "UserService" --edge-types DEPENDS_ON
@@ -73,7 +73,7 @@ Natural language query: find workflows related to checkout
 graphiti search "checkout" --entity-types Workflow
 
 Natural language query: show recent authentication changes with high quality
-graphiti search advanced "authentication" --created-after "48 hours ago" --method hybrid --reranker cross_encoder --quality-threshold 0.8
+graphiti search advanced "authentication" --created-after "2025-07-16T00:00:00" --method hybrid --reranker cross_encoder --quality-threshold 0.8
 
 Natural language query: what components belong to the payment project?
 graphiti search "" --edge-types BELONGS_TO_PROJECT --group-ids project_payment
@@ -85,7 +85,7 @@ Natural language query: find procedures for setup
 graphiti search "setup" --entity-types Procedure
 
 Natural language query: show me everything that changed yesterday
-graphiti search temporal "" --created-after "48 hours ago" --created-before "24 hours ago"
+graphiti search temporal "" --created-after "2025-07-16T00:00:00" --created-before "2025-07-16T23:59:59"
 
 Natural language query: find insights about performance
 graphiti search "performance" --entity-types Insight
@@ -94,11 +94,13 @@ graphiti search "performance" --entity-types Insight
 
 1. Output ONLY the CLI command, nothing else
 2. For "recent"/"latest"/"new" queries, use temporal search with --created-after
-3. Map entity names correctly (e.g., "components" → Component, "patterns" → Pattern)
-4. Use exact edge type formats (UPPER_CASE except ImplementsPattern)
-5. Default to basic search unless temporal or quality requirements are specified
-6. Include --max-results when user asks for "all" or "everything"
-7. For high quality requests, use advanced search with cross_encoder
+3. ALWAYS use ISO-8601 date formats: "2024-07-16" or "2024-07-16T10:00:00" - NEVER use relative dates like "24 hours ago"
+4. Map entity names correctly (e.g., "components" → Component, "patterns" → Pattern)
+5. Use exact edge type formats (UPPER_CASE except ImplementsPattern)
+6. Default to basic search unless temporal or quality requirements are specified
+7. Include --max-results when user asks for "all" or "everything"
+8. For high quality requests, use advanced search with cross_encoder
+9. When user says "recent" use today's date (2025-07-17), "yesterday" use 2025-07-16, "last week" use 2025-07-10
 
 Now translate the query into a CLI command:
 """
