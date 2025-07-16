@@ -3,7 +3,7 @@ from typing import List, Optional
 from pathlib import Path
 import json
 from datetime import datetime
-from claude_code_sdk import Message
+from claude_code_sdk import Message, UserMessage, AssistantMessage
 
 from .interpreter import QueryInterpreter
 from .executor import CommandExecutor
@@ -27,13 +27,13 @@ class QuerySession:
             Tuple of (command, success, output)
         """
         # Add query to conversation
-        self.messages.append(Message(role="user", content=query))
+        self.messages.append(UserMessage(content=query))
         
         # Get CLI command from interpreter
         command = await self.interpreter.interpret_query(query, self.messages[:-1])
         
         # Add command to conversation
-        self.messages.append(Message(role="assistant", content=command))
+        self.messages.append(AssistantMessage(content=command))
         
         # Execute command
         success, output = await self.executor.execute(command, dry_run)

@@ -1,6 +1,6 @@
 """Natural language query interpreter using Claude SDK."""
 from typing import List, Optional
-from claude_code_sdk import query, ClaudeCodeOptions, Message
+from claude_code_sdk import query, ClaudeCodeOptions, Message, UserMessage, AssistantMessage
 from .prompts import GRAPHITI_CLI_EXPERT_PROMPT_WITH_EXAMPLES
 
 
@@ -22,9 +22,7 @@ class QueryInterpreter:
             options=ClaudeCodeOptions(
                 model="claude-3-5-sonnet-20241022",  # Use Sonnet for speed
                 system_prompt=self.system_prompt,
-                temperature=self.temperature,
-                max_turns=1,
-                timeout_ms=5000  # 5 second timeout
+                max_turns=1
             )
         ):
             messages.append(message)
@@ -34,7 +32,13 @@ class QueryInterpreter:
             return f'graphiti search "{user_query}"'
             
         # Return the command directly from Claude's response
-        return messages[-1].content.strip()
+        result_msg = messages[-1]
+        if hasattr(result_msg, 'result'):
+            return result_msg.result.strip()
+        elif hasattr(result_msg, 'content'):
+            return result_msg.content.strip()
+        else:
+            return f'graphiti search "{user_query}"'
     
     def _build_prompt(self, user_query: str, context: List[Message] = None) -> str:
         """Build prompt with query and optional context."""
@@ -43,7 +47,7 @@ class QueryInterpreter:
         if context and len(context) > 0:
             # Add last command for context
             for msg in reversed(context):
-                if msg.role == "assistant" and msg.content.startswith("graphiti"):
+                if isinstance(msg, AssistantMessage) and msg.content.startswith("graphiti"):
                     prompt = f"Previous command: {msg.content}\n\n{prompt}"
                     break
         

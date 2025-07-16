@@ -5,14 +5,14 @@ import sys
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
-from graphiti_core.search import SearchConfig
+from graphiti_core.search import search_config
 from graphiti_core.search.search_filters import SearchFilters, DateFilter
 from graphiti_core.search.search_config_recipes import (
     EDGE_HYBRID_SEARCH_RRF,
     COMBINED_HYBRID_SEARCH_CROSS_ENCODER,
-    NODE_BFS_SEARCH,
     NODE_HYBRID_SEARCH_RRF,
-    EDGE_BFS_SEARCH
+    EDGE_HYBRID_SEARCH_CROSS_ENCODER,
+    EDGE_HYBRID_SEARCH_MMR
 )
 
 from ..utils.formatters import format_output
@@ -206,13 +206,12 @@ def advanced_search(ctx, query, method, reranker, quality_threshold, diversity,
         
         # Select appropriate search config based on method and reranker
         if method == 'bfs':
-            search_config = NODE_BFS_SEARCH if not query else EDGE_BFS_SEARCH
-            # TODO: Configure max_depth in search config
+            search_config = NODE_HYBRID_SEARCH_RRF if not query else EDGE_HYBRID_SEARCH_RRF
+            # Note: BFS-specific configs not available, using hybrid as fallback
         elif reranker == 'cross_encoder':
             search_config = COMBINED_HYBRID_SEARCH_CROSS_ENCODER
         elif reranker == 'mmr':
-            # TODO: Create MMR config with diversity parameter
-            search_config = EDGE_HYBRID_SEARCH_RRF
+            search_config = EDGE_HYBRID_SEARCH_MMR
         else:
             search_config = EDGE_HYBRID_SEARCH_RRF
         
