@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 
 from .commands import search, episodes, maintenance, query
+from .commands.search import search_command
 from .utils.client import ClientContext
 
 load_dotenv()
@@ -37,7 +38,7 @@ def cli(ctx, debug):
     ctx.obj = ClientContext(debug=debug)
 
 # Register command groups
-cli.add_command(search.search_group)
+cli.add_command(search_command)  # Direct search command
 cli.add_command(episodes.episode_group)
 cli.add_command(maintenance.maintenance_group)
 cli.add_command(query.query_command)

@@ -64,7 +64,7 @@ def add_episode(ctx, name, content, source, group_id, entity_types, timestamp, f
         client = ctx.get_client()
         
         # Map source string to EpisodeType
-        episode_type = EpisodeType.message if source == 'message' else source
+        episode_type = EpisodeType.message if source == 'message' else EpisodeType[source]
         
         result = await client.add_episode(
             name=name,
@@ -72,12 +72,12 @@ def add_episode(ctx, name, content, source, group_id, entity_types, timestamp, f
             source_description=source,
             reference_time=timestamp or datetime.now(timezone.utc),
             group_id=group_id,
-            episode_type=episode_type,
+            source=episode_type,
             entity_types=entity_types_dict
         )
         
         return {
-            'episode': result.episode.model_dump(),
+            'episode': result.episode.model_dump(mode='json'),
             'nodes_created': len(result.nodes),
             'edges_created': len(result.edges)
         }
@@ -126,8 +126,8 @@ def get_episodes(ctx, group_id, last_n, after, before, output):
             group_ids=[group_id] if group_id else None
         )
         
-        # Convert to dicts
-        episode_dicts = [ep.model_dump() for ep in episodes]
+        # Convert to dicts with proper serialization
+        episode_dicts = [ep.model_dump(mode='json') for ep in episodes]
         
         # Filter by after date if specified
         if after:
@@ -197,14 +197,16 @@ def process_bulk(ctx, file, group_id, batch_size, dry_run):
             
             for j, ep_data in enumerate(batch):
                 try:
-                    episode_type = EpisodeType.message if ep_data.get('source') == 'message' else ep_data.get('source', 'text')
+                    source_str = ep_data.get('source', 'text')
+                    episode_type = EpisodeType.message if source_str == 'message' else EpisodeType[source_str]
                     
                     await client.add_episode(
                         name=ep_data['name'],
                         episode_body=ep_data['content'],
                         source_description=ep_data.get('source', 'text'),
+                        reference_time=datetime.now(timezone.utc),
                         group_id=group_id or ep_data.get('group_id'),
-                        episode_type=episode_type
+                        source=episode_type
                     )
                     results['processed'] += 1
                 except Exception as e:

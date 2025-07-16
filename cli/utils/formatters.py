@@ -4,6 +4,7 @@ import csv
 import io
 from typing import Any, List, Dict, Union
 from datetime import datetime
+from enum import Enum
 
 def format_output(data: Any, format: str = 'json') -> str:
     """Format output based on requested format"""
@@ -17,10 +18,14 @@ def format_output(data: Any, format: str = 'json') -> str:
         raise ValueError(f"Unknown format: {format}")
 
 def format_json(data: Any) -> str:
-    """Format as JSON with datetime handling"""
+    """Format as JSON with datetime and enum handling"""
     def json_serial(obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
+        elif isinstance(obj, Enum):
+            return obj.value
+        elif hasattr(obj, 'model_dump'):
+            return obj.model_dump()
         raise TypeError(f"Type {type(obj)} not serializable")
     
     return json.dumps(data, indent=2, default=json_serial)

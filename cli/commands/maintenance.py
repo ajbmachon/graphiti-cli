@@ -44,7 +44,7 @@ def build_communities(ctx, group_ids, algorithm, output):
         )
         
         # Get community count
-        result = await client.driver.query(
+        result = await client.driver.execute_query(
             """
             MATCH (c:Community)
             RETURN count(c) as community_count
@@ -53,7 +53,7 @@ def build_communities(ctx, group_ids, algorithm, output):
         
         return {
             'status': 'success',
-            'communities_created': result[0]['community_count'] if result else 0,
+            'communities_created': result.records[0]['community_count'] if result.records else 0,
             'group_ids': list(group_ids) if group_ids else 'all'
         }
     
@@ -110,8 +110,8 @@ def export_graph(ctx, group_ids, format, include_embeddings, output_file):
         
         params = {'group_ids': groups} if groups else {}
         
-        nodes_result = await client.driver.query(nodes_query, params)
-        edges_result = await client.driver.query(edges_query, params)
+        nodes_result = await client.driver.execute_query(nodes_query, params)
+        edges_result = await client.driver.execute_query(edges_query, params)
         
         # Process nodes
         nodes = []
@@ -204,24 +204,25 @@ def graph_stats(ctx, group_ids, detailed, output):
         
         params = {'group_ids': groups}
         
-        node_types = await client.driver.query(node_types_query, params)
-        edge_types = await client.driver.query(edge_types_query, params)
-        group_stats = await client.driver.query(groups_query, {})
+        node_types = await client.driver.execute_query(node_types_query, **params)
+        edge_types = await client.driver.execute_query(edge_types_query, **params)
+        group_stats = await client.driver.execute_query(groups_query)
         
         # Process results
+        # execute_query returns EagerResult with records attribute
         stats['node_types'] = {
             record['labels'][0]: record['count'] 
-            for record in node_types if record['labels']
+            for record in node_types.records if record['labels']
         }
         
         stats['edge_types'] = {
             record['type']: record['count'] 
-            for record in edge_types
+            for record in edge_types.records
         }
         
         stats['groups'] = {
             record['group_id']: record['node_count'] 
-            for record in group_stats
+            for record in group_stats.records
         }
         
         stats['totals'] = {
@@ -242,10 +243,10 @@ def graph_stats(ctx, group_ids, detailed, output):
             LIMIT 20
             """
             
-            degree_dist = await client.driver.query(degree_query, params)
+            degree_dist = await client.driver.execute_query(degree_query, **params)
             stats['degree_distribution'] = {
                 record['degree']: record['count'] 
-                for record in degree_dist
+                for record in degree_dist.records
             }
             
             # Recent activity
@@ -258,7 +259,7 @@ def graph_stats(ctx, group_ids, detailed, output):
             LIMIT 7
             """
             
-            recent = await client.driver.query(recent_query, params)
+            recent = await client.driver.execute_query(recent_query, params)
             stats['recent_activity'] = {
                 record['date']: record['count'] 
                 for record in recent
@@ -309,11 +310,11 @@ def clear_graph(ctx, group_ids, confirm):
             WHERE n.group_id IN $group_ids
             DETACH DELETE n
             """
-            await client.driver.query(delete_query, {'group_ids': groups})
+            await client.driver.execute_query(delete_query, {'group_ids': groups})
             return {'cleared_groups': list(groups)}
         else:
             # Clear entire graph
-            await client.driver.query("MATCH (n) DETACH DELETE n")
+            await client.driver.execute_query("MATCH (n) DETACH DELETE n")
             return {'status': 'entire graph cleared'}
     
     try:
