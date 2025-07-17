@@ -42,33 +42,33 @@ Install with `pip install -e ".[ai]"` and set `ANTHROPIC_API_KEY`. See [query ex
 
 ```bash
 # Changes in the last 24 hours
-graphiti search temporal "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest
+graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest
 
 # Updates this week  
-graphiti search temporal "authentication" --created-after "$(date -d '7 days ago' -Iseconds)"
+graphiti search "authentication" --created-after "$(date -d '7 days ago' -Iseconds)"
 
 # Changes in a specific period
-graphiti search temporal "config" --created-after "2024-01-01" --created-before "2024-02-01"
+graphiti search "config" --created-after "2024-01-01" --created-before "2024-02-01"
 ```
 
 ### 2. High-Quality Search Results
 
 ```bash
 # Use cross-encoder for best relevance
-graphiti search advanced "design patterns" --method hybrid --reranker cross_encoder
+graphiti search "design patterns" --reranker cross_encoder
 
-# Filter low-quality results
-graphiti search advanced "solutions" --quality-threshold 0.8
+# Combine temporal and advanced search
+graphiti search "solutions" --created-after "2024-01-01" --reranker cross_encoder
 
 # Get diverse perspectives with MMR
-graphiti search advanced "approaches" --reranker mmr --diversity 0.7
+graphiti search "approaches" --reranker mmr
 ```
 
 ### 3. Relationship Discovery
 
 ```bash
-# Find dependencies up to 3 levels deep
-graphiti search advanced "" --method bfs --max-depth 3 --center-node "component-uuid"
+# Find dependencies
+graphiti search "component" --center-node "component-uuid" --method bfs
 
 # Find all edges of specific types
 graphiti search "payment service" --edge-types DEPENDS_ON --edge-types IMPLEMENTS_PATTERN
@@ -77,7 +77,7 @@ graphiti search "payment service" --edge-types DEPENDS_ON --edge-types IMPLEMENT
 ### 4. Entity-Specific Searches
 
 ```bash
-# Search only Components and Patterns
+# Search only Components and Patterns (use multiple flags)
 graphiti search "authentication" --entity-types Component --entity-types Pattern
 
 # Find all Workflows in a project
@@ -90,9 +90,9 @@ graphiti search "" --entity-types Workflow --group-ids project_architecture
 ```bash
 # Run searches in parallel and combine results
 {
-  graphiti search temporal "auth changes" --created-after "2024-01-01" &
-  graphiti search temporal "database updates" --created-after "2024-01-01" &
-  graphiti search temporal "api modifications" --created-after "2024-01-01" &
+  graphiti search "auth changes" --created-after "2024-01-01" &
+  graphiti search "database updates" --created-after "2024-01-01" &
+  graphiti search "api modifications" --created-after "2024-01-01" &
   wait
 } | jq -s 'add'
 ```
@@ -114,7 +114,7 @@ graphiti search "authentication" \
 ### What Changed Recently?
 ```bash
 # Get all recent changes in a project
-graphiti search temporal "" \
+graphiti search "" \
   --created-after "$(date -d '1 week ago' -Iseconds)" \
   --group-ids project_x \
   --order newest
@@ -123,7 +123,7 @@ graphiti search temporal "" \
 ### Historical Analysis
 ```bash
 # Find original design decisions
-graphiti search temporal "architecture decisions" \
+graphiti search "architecture decisions" \
   --created-before "$(date -d '6 months ago' -Iseconds)" \
   --order oldest
 ```
@@ -131,7 +131,7 @@ graphiti search temporal "architecture decisions" \
 ### Change Tracking
 ```bash
 # Track evolution of a component
-graphiti search temporal "UserService" \
+graphiti search "UserService" \
   --entity-types Component \
   --order oldest \
   --max-results 100
@@ -142,19 +142,16 @@ graphiti search temporal "UserService" \
 ### Quality-Focused Searches
 ```bash
 # Only high-confidence results for critical queries
-graphiti search advanced "security vulnerabilities" \
-  --method hybrid \
-  --reranker cross_encoder \
-  --quality-threshold 0.9
+graphiti search "security vulnerabilities" \
+  --reranker cross_encoder
 ```
 
 ### Graph Traversal
 ```bash
 # Explore relationships from a starting point
-graphiti search advanced "" \
+graphiti search "" \
   --method bfs \
-  --center-node "7f8a9b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c" \
-  --max-depth 2
+  --center-node "7f8a9b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c"
 ```
 
 ### Combined Filters
@@ -234,7 +231,7 @@ graphiti search "patterns" --output pretty > patterns_report.txt
 
 ### 1. "What's new in this area?"
 ```bash
-graphiti search temporal "authentication system" \
+graphiti search "authentication system" \
   --created-after "$(date -d '48 hours ago' -Iseconds)" \
   --order newest
 ```
