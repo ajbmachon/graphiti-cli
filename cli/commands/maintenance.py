@@ -5,7 +5,7 @@ import sys
 import json
 from datetime import datetime
 
-from ..utils.formatters import format_output
+from ..utils.formatters import format_output, remove_embeddings
 from ..utils.validators import validate_group_ids
 
 @click.group(name='maintenance')
@@ -110,25 +110,25 @@ def export_graph(ctx, group_ids, format, include_embeddings, output_file):
         
         params = {'group_ids': groups} if groups else {}
         
-        nodes_result = await client.driver.execute_query(nodes_query, params)
-        edges_result = await client.driver.execute_query(edges_query, params)
+        nodes_result = await client.driver.execute_query(nodes_query, **params)
+        edges_result = await client.driver.execute_query(edges_query, **params)
         
         # Process nodes
         nodes = []
-        for record in nodes_result:
+        for record in nodes_result.records:
             node = dict(record['n'])
-            if not include_embeddings and 'embedding' in node:
-                del node['embedding']
+            if not include_embeddings:
+                node = remove_embeddings(node)
             nodes.append(node)
         
         # Process edges
         edges = []
-        for record in edges_result:
+        for record in edges_result.records:
             edge = dict(record['r'])
             edge['source'] = record['source']
             edge['target'] = record['target']
-            if not include_embeddings and 'embedding' in edge:
-                del edge['embedding']
+            if not include_embeddings:
+                edge = remove_embeddings(edge)
             edges.append(edge)
         
         return {

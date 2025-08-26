@@ -6,7 +6,7 @@ A command-line interface that provides direct access to Graphiti's full API capa
 
 - 🤖 **Natural Language Interface** - Query using plain English powered by Claude
 - 🕒 **Temporal Queries** - Search by creation date, validity periods
-- 🔍 **Advanced Search** - Configure search methods, reranking, quality thresholds  
+- 🔍 **Advanced Search** - Configure search methods, reranking, quality thresholds
 - 📊 **Graph Analytics** - Statistics, community detection, structure analysis
 - 📦 **Bulk Operations** - Import/export episodes, batch processing
 - ⚡ **Parallel Execution** - Run multiple searches simultaneously
@@ -52,10 +52,34 @@ graphiti maintenance stats --detailed
 graphiti maintenance export --group-ids project_x > backup.json
 ```
 
+## 🤖 For AI Coding Agents (Claude, Gemini, etc.)
+
+**IMPORTANT**: To enable your AI coding agents to use grahpiti-cli with the 13 custom entity types and 14 edge types effectively, you must copy the agent guide to your project:
+
+```bash
+# Copy the comprehensive agent guide to your project
+cp CLAUDE-GUIDE.md ~/.claude/CLAUDE.md        # For Claude Code users
+# OR copy to your project-specific agent instructions:
+cp CLAUDE-GUIDE.md your-project/AGENTS.md     # Generic agent instructions
+cp CLAUDE-GUIDE.md your-project/CLAUDE.md     # Claude-specific instructions
+cp CLAUDE-GUIDE.md your-project/GEMINI.md     # Gemini-specific instructions
+```
+
+The `CLAUDE-GUIDE.md` file contains:
+- **13 Custom Entity Types** (Component, Pattern, Workflow, etc.) with usage guidelines
+- **14 Custom Edge Types** (DEPENDS_ON, ImplementsPattern, etc.) for relationships
+- **Essential startup routines** for AI agents to load preferences and patterns
+- **Search strategies** with entity/edge type filtering
+- **Memory storage patterns** optimized for different JSON complexity levels
+- **Performance guidelines** (text: 2-3s, simple JSON: 5-8s, complex JSON: 15-20s)
+
+Without this guide, AI agents will miss the advanced semantic capabilities and custom types that make Graphiti powerful for software analysis and documentation.
+
 ## Documentation
 
-- [GUIDE.md](GUIDE.md) - Comprehensive usage guide
-- [CLAUDE.md](CLAUDE.md) - AI agent integration guide
+- [GUIDE.md](GUIDE.md) - Comprehensive usage guide for humans
+- [CLAUDE-GUIDE.md](CLAUDE-GUIDE.md) - **Copy this to your AI agent instructions**
+- [CLAUDE.md](CLAUDE.md) - Project-specific Claude integration
 
 ## Commands Overview
 

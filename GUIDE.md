@@ -41,8 +41,11 @@ Install with `pip install -e ".[ai]"` and set `ANTHROPIC_API_KEY`. See [query ex
 ### 1. Finding Recent Information
 
 ```bash
-# Changes in the last 24 hours
+# Changes in the last 24 hours (simplified output by default)
 graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest
+
+# Same search with full details (UUIDs, timestamps, etc.)
+graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest --full-output
 
 # Updates this week  
 graphiti search "authentication" --created-after "$(date -d '7 days ago' -Iseconds)"
@@ -206,6 +209,26 @@ graphiti episodes process-bulk episodes.json --dry-run
 
 ## Output Processing
 
+### Simplified Output for AI Agents (Default)
+By default, search results show only essential fields to preserve context for AI agents:
+- `name`: The relationship type (e.g., DEPENDS_ON)
+- `fact`: The actual relationship information
+- `group_id`: Context for the relationship
+
+```bash
+# Default simplified output (optimized for AI agents)
+graphiti search "authentication"
+# Returns: [{"name": "DEPENDS_ON", "fact": "Auth depends on DB", "group_id": "project"}]
+
+# Ultra-compact pretty format for AI agents
+graphiti search "patterns" --output pretty
+# Returns: [DEPENDS_ON] Auth depends on DB (project)
+
+# Get full details when needed
+graphiti search "authentication" --full-output
+# Returns: All fields including UUIDs, timestamps, attributes, etc.
+```
+
 ### JSON Manipulation
 ```bash
 # Extract specific fields
@@ -225,6 +248,9 @@ graphiti search "authentication" --output pretty
 
 # Save pretty output
 graphiti search "patterns" --output pretty > patterns_report.txt
+
+# Full details in pretty format
+graphiti search "patterns" --output pretty --full-output
 ```
 
 ## Common Use Cases

@@ -15,7 +15,7 @@ from graphiti_core.search.search_config_recipes import (
     EDGE_HYBRID_SEARCH_MMR
 )
 
-from ..utils.formatters import format_output
+from ..utils.formatters import format_output, remove_embeddings
 from ..utils.validators import (
     validate_date_range, validate_threshold, validate_group_ids,
     validate_entity_types, validate_edge_types
@@ -38,11 +38,15 @@ from ..utils.validators import (
 @click.option('--reranker', '-r', type=click.Choice(['none', 'cross_encoder', 'mmr']), help='Reranking strategy (advanced)')
 # Output
 @click.option('--output', '-o', type=click.Choice(['json', 'pretty', 'csv']), default='json', help='Output format')
+@click.option('--full-output', '-f', is_flag=True, help='Show all fields (default: simplified output for AI agents)')
 @click.pass_obj
 def search_command(ctx, query, group_ids, entity_types, edge_types, max_results, center_node,
                   created_after, created_before, order,
-                  method, reranker, output):
+                  method, reranker, output, full_output):
     """Search the knowledge graph.
+    
+    By default, returns simplified output optimized for AI agents (name, fact, group_id only).
+    Use --full-output to see all fields including UUIDs, timestamps, and attributes.
     
     The search mode is automatically selected based on options:
     - Date filters (--created-after/before) → temporal search
@@ -51,8 +55,11 @@ def search_command(ctx, query, group_ids, entity_types, edge_types, max_results,
     
     Examples:
     
-        # Basic search
+        # Basic search (simplified output)
         graphiti search "authentication"
+        
+        # Same search with full details
+        graphiti search "authentication" --full-output
         
         # Temporal search (automatic when using date filters)
         graphiti search "changes" --created-after "2025-01-01" --order newest
@@ -70,17 +77,17 @@ def search_command(ctx, query, group_ids, entity_types, edge_types, max_results,
     if has_advanced:
         # Advanced search mode (can include temporal filters)
         advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                       created_after, created_before, order, method, reranker, output)
+                       created_after, created_before, order, method, reranker, output, full_output)
     elif has_temporal:
         # Temporal search without advanced features
         temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                       created_after, created_before, order, output)
+                       created_after, created_before, order, output, full_output)
     else:
         # Basic search
         basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, 
-                    center_node, output)
+                    center_node, output, full_output)
 
-def basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, center_node, output):
+def basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, center_node, output, full_output):
     """Basic search with filtering options."""
     async def run_search():
         client = ctx.get_client()
@@ -101,18 +108,18 @@ def basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, c
             search_filter=search_filter
         )
         
-        # Convert results to dict for formatting
-        return [edge.model_dump(mode='json') for edge in results]
+        # Convert results to dict for formatting, excluding embeddings
+        return [remove_embeddings(edge.model_dump(mode='json')) for edge in results]
     
     try:
         results = asyncio.run(run_search())
-        click.echo(format_output(results, output))
+        click.echo(format_output(results, output, full_output=full_output))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
 
 def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                   created_after, created_before, order, output):
+                   created_after, created_before, order, output, full_output):
     """Temporal search with date filtering."""
     validate_date_range(created_after, created_before, "created")
     
@@ -143,8 +150,8 @@ def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results
             search_filter=search_filter
         )
         
-        # Convert and optionally sort results
-        result_dicts = [edge.model_dump(mode='json') for edge in results]
+        # Convert and optionally sort results, excluding embeddings
+        result_dicts = [remove_embeddings(edge.model_dump(mode='json')) for edge in results]
         
         if order == 'newest':
             result_dicts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
@@ -155,13 +162,13 @@ def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results
     
     try:
         results = asyncio.run(run_temporal())
-        click.echo(format_output(results, output))
+        click.echo(format_output(results, output, full_output=full_output))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
 
 def advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                   created_after, created_before, order, method, reranker, output):
+                   created_after, created_before, order, method, reranker, output, full_output):
     """Advanced search with reranking and optional temporal filters."""
     validate_date_range(created_after, created_before, "created")
     
@@ -202,7 +209,7 @@ def advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results
         
         # Extract edges from SearchResults
         if hasattr(results, 'edges'):
-            result_dicts = [edge.model_dump(mode='json') for edge in results.edges]
+            result_dicts = [remove_embeddings(edge.model_dump(mode='json')) for edge in results.edges]
         else:
             result_dicts = []
         
@@ -216,7 +223,7 @@ def advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results
     
     try:
         results = asyncio.run(run_advanced())
-        click.echo(format_output(results, output))
+        click.echo(format_output(results, output, full_output=full_output))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
