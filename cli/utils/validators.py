@@ -1,5 +1,5 @@
 """Input validation utilities for Graphiti CLI"""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import click
 
@@ -21,6 +21,22 @@ def validate_group_ids(group_ids: tuple) -> list:
     if not group_ids:
         return None
     return [str(g).strip() for g in list(group_ids)]
+
+# Accepted datetime formats for CLI parameters (includes 'Z' suffix)
+DATETIME_FORMATS = (
+    '%Y-%m-%d',
+    '%Y-%m-%dT%H:%M:%S',
+    '%Y-%m-%d %H:%M:%S',
+    '%Y-%m-%dT%H:%M:%SZ',
+)
+
+def to_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Return timezone-aware UTC datetime; treat naive values as UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 def validate_entity_types(entity_types: tuple) -> list:
     if not entity_types:

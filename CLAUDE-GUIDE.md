@@ -85,12 +85,18 @@ graphiti search "Repository" --edge-types ImplementsPattern
 
 ### Finding Recent Changes (Temporal Power)
 ```bash
-# Last 24 hours with entity filtering
-graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --entity-types Component --order newest
+# Last 24 hours with entity filtering (UTC formats accepted)
+graphiti search "" --created-after 2025-08-30T12:00:00 --entity-types Component --order newest
 
 # Recent insights
-graphiti search "" --created-after "2025-01-15" --entity-types Insight --order newest
+graphiti search "" --created-after 2025-01-15 --entity-types Insight --order newest
 ```
+
+### Temporal Formats (Use These)
+- YYYY-MM-DD
+- YYYY-MM-DDTHH:MM:SS
+- YYYY-MM-DD HH:MM:SS
+- YYYY-MM-DDTHH:MM:SSZ (Zulu/UTC)
 
 ### High-Quality Search
 ```bash
@@ -320,3 +326,9 @@ Every interaction builds typed knowledge:
 - **Insights** → Cross-project learnings
 
 The 13 entity types and 14 edge types provide semantic structure that makes knowledge retrieval precise and relationships meaningful. Use them to build a comprehensive, queryable intelligence system.
+### Playbook for Relevance (Agents)
+- Narrow scope with `--group-ids`.
+- If you have a user/session UUID, set `--center-node`.
+- Start with relation-centric queries (edges). If empty, the CLI automatically falls back to node-hybrid search.
+- Add time windows (`--created-after/--created-before`) and set `--order newest` for fresh context.
+- Use `--fields`/`--ids-only` to keep context payloads small.

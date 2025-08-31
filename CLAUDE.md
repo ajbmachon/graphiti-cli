@@ -60,3 +60,8 @@ export OPENAI_API_KEY="your-key"
 - Use parallel execution for multiple independent queries
 - Always check exit codes for error handling
 - Default to JSON output for programmatic processing
+[byterover-mcp]
+
+# important 
+always use byterover-retrieve-knowledge tool to get the related context before any tasks 
+always use byterover-store-knowledge to store all the critical informations after sucessful tasks

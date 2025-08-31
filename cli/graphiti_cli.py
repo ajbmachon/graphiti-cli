@@ -7,7 +7,7 @@ import sys
 import os
 from dotenv import load_dotenv
 
-from .commands import search, episodes, maintenance, query
+from .commands import search, episodes, maintenance
 from .commands.search import search_command
 from .utils.client import ClientContext
 
@@ -41,7 +41,14 @@ def cli(ctx, debug):
 cli.add_command(search_command)  # Direct search command
 cli.add_command(episodes.episode_group)
 cli.add_command(maintenance.maintenance_group)
-cli.add_command(query.query_command)
+
+# Add query command only if optional dependency is available
+try:
+    from .commands import query as query_mod
+    if getattr(query_mod, 'query_command', None):
+        cli.add_command(query_mod.query_command)
+except Exception:
+    pass
 
 if __name__ == '__main__':
     cli()

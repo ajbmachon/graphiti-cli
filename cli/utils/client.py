@@ -16,6 +16,9 @@ class ClientContext:
             # Disable Graphiti telemetry by default unless explicitly enabled
             if os.environ.get('GRAPHITI_TELEMETRY_ENABLED') is None:
                 os.environ['GRAPHITI_TELEMETRY_ENABLED'] = 'false'
+            # Avoid Neo4j warnings on unsupported parallel runtime
+            if os.environ.get('USE_PARALLEL_RUNTIME') is None:
+                os.environ['USE_PARALLEL_RUNTIME'] = 'false'
             uri = os.environ.get('NEO4J_URI', 'bolt://localhost:7687')
             user = os.environ.get('NEO4J_USER', 'neo4j')
             password = os.environ.get('NEO4J_PASSWORD')

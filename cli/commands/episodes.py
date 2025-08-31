@@ -92,8 +92,12 @@ def add_episode(ctx, name, content, source, group_id, entity_types, timestamp, f
 @episode_group.command(name='get')
 @click.option('--group-id', '-g', help='Filter by group ID')
 @click.option('--last-n', '-n', default=10, help='Number of recent episodes')
-@click.option('--after', type=click.DateTime(), help='Episodes after date')
-@click.option('--before', type=click.DateTime(), help='Episodes before date')
+@click.option('--after', type=click.DateTime(formats=(
+    '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%SZ'
+)), help='Episodes after date (UTC). Accepts YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, with or without Z')
+@click.option('--before', type=click.DateTime(formats=(
+    '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%SZ'
+)), help='Episodes before date (UTC). Accepts YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, with or without Z')
 @click.option('--output', '-o', type=click.Choice(['json', 'jsonc', 'jsonl', 'ndjson', 'pretty']), default='json')
 @click.pass_obj
 def get_episodes(ctx, group_id, last_n, after, before, output):
@@ -129,13 +133,29 @@ def get_episodes(ctx, group_id, last_n, after, before, output):
         # Convert to dicts with proper serialization
         episode_dicts = [ep.model_dump(mode='json') for ep in episodes]
         
-        # Filter by after date if specified
-        if after:
-            episode_dicts = [
-                ep for ep in episode_dicts 
-                if ep.get('valid_at') and 
-                datetime.fromisoformat(ep['valid_at'].replace('Z', '+00:00')) > after
-            ]
+        # Normalize times to UTC-aware datetimes, then filter
+        from ..utils.validators import to_utc
+        after_utc = to_utc(after)
+        before_utc = to_utc(before)
+        
+        if after_utc or before_utc:
+            filtered = []
+            for ep in episode_dicts:
+                ts = ep.get('valid_at') or ep.get('created_at')
+                if not ts:
+                    continue
+                try:
+                    # Support Z suffix
+                    ts_dt = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                except Exception:
+                    continue
+                ts_dt = to_utc(ts_dt)
+                if after_utc and ts_dt <= after_utc:
+                    continue
+                if before_utc and ts_dt >= before_utc:
+                    continue
+                filtered.append(ep)
+            episode_dicts = filtered
         
         return episode_dicts
     

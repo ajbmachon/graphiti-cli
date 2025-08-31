@@ -42,16 +42,16 @@ Install with `pip install -e ".[ai]"` and set `ANTHROPIC_API_KEY`. See [query ex
 
 ```bash
 # Changes in the last 24 hours (simplified output by default)
-graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest
+graphiti search "" --created-after 2025-08-30T12:00:00 --order newest
 
 # Same search with full details (UUIDs, timestamps, etc.)
-graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest --full-output
+graphiti search "" --created-after 2025-08-30T12:00:00 --order newest --full-output
 
-# Updates this week  
-graphiti search "authentication" --created-after "$(date -d '7 days ago' -Iseconds)"
+# Updates this week
+graphiti search "authentication" --created-after 2025-08-24
 
 # Changes in a specific period
-graphiti search "config" --created-after "2024-01-01" --created-before "2024-02-01"
+graphiti search "config" --created-after 2025-01-01 --created-before 2025-02-01
 ```
 
 ### 2. High-Quality Search Results
@@ -258,9 +258,44 @@ graphiti search "patterns" --output pretty --full-output
 ### 1. "What's new in this area?"
 ```bash
 graphiti search "authentication system" \
-  --created-after "$(date -d '48 hours ago' -Iseconds)" \
+  --created-after 2025-08-29T12:00:00 \
   --order newest
 ```
+
+## Temporal Queries and Accepted Time Formats (Critical)
+- Accepted formats for temporal flags (`--created-after/--created-before`, `episodes get --after/--before`):
+  - YYYY-MM-DD
+  - YYYY-MM-DDTHH:MM:SS
+  - YYYY-MM-DD HH:MM:SS
+  - YYYY-MM-DDTHH:MM:SSZ (Zulu/UTC)
+- All times are interpreted as UTC. The CLI normalizes timezone-aware and naive times internally.
+- Examples:
+  - `graphiti search "return" -g support --created-after 2025-08-31T15:30:00 --order newest`
+  - `graphiti episodes get --group-id support --after 2025-08-31 -o json`
+
+## Relevance Controls: Groups, Centering, Types
+- Use `-g/--group-ids` to scope results to a project/workspace.
+- Use `--center-node <uuid>` to bias ranking around a user/item; improves per-user relevance.
+- Filter by `--entity-types` and `--edge-types` (see Custom Types) for precise slices of the graph.
+- Edge-first plus node fallback: If an edge search returns no results, the CLI automatically falls back to a node-hybrid search to surface entity hits.
+
+## Custom Types and Effective Searching
+- Entities: Requirement, Preference, Procedure, Project, Component, Pattern, Insight, Workflow, Agent, ValidationPoint, LimitationPattern, PromptTemplate, DomainConcept.
+- Edges: BELONGS_TO_PROJECT, DEPENDS_ON, ImplementsPattern, LEADS_TO_INSIGHT, VALIDATES, TRIGGERS_LIMITATION, COORDINATES_WITH, ANALYZES_COMPONENT, EVOLVES_FROM, APPLIES_TO, FOLLOWS_WORKFLOW, DOCUMENTS, REFERENCES.
+- Patterns:
+  - Architecture navigation: `graphiti search "checkout" -g shop --edge-types DEPENDS_ON`
+  - Procedures & preferences: `graphiti search "release" --entity-types Procedure --created-after 2025-08-01`
+  - Agent context preservation: always use `--group-ids` and `--center-node` with a known user/session UUID.
+
+## Agent Search Playbook
+1) Narrow by `--group-ids`.
+2) If available, set `--center-node` to your user/session/context node.
+3) Query edges with precise relations; if empty, node fallback will populate.
+4) Add temporal windows and set `--order newest` for up-to-date information.
+5) Compact the payload with `--fields` or `--ids-only` for agent context.
+
+## Troubleshooting
+- Parallel runtime warnings: Some Neo4j versions do not support `CYPHER runtime=parallel`. The CLI sets `USE_PARALLEL_RUNTIME=false` automatically. If warnings persist, upgrade Neo4j or `graphiti-core`.
 
 ### 2. "Find all dependencies"
 ```bash

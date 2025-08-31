@@ -30,8 +30,12 @@ from ..utils.validators import (
 @click.option('--max-results', '-n', default=10, help='Maximum results')
 @click.option('--center-node', help='UUID for centered search')
 # Temporal filters
-@click.option('--created-after', type=click.DateTime(), help='Filter by creation date')
-@click.option('--created-before', type=click.DateTime(), help='Filter by creation date')
+@click.option('--created-after', type=click.DateTime(formats=(
+    '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%SZ'
+)), help='Created at/valid at AFTER (UTC). Accepts YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, with or without Z')
+@click.option('--created-before', type=click.DateTime(formats=(
+    '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%SZ'
+)), help='Created at/valid at BEFORE (UTC). Accepts YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, with or without Z')
 @click.option('--order', type=click.Choice(['newest', 'oldest', 'relevance']), default='relevance', help='Sort order')
 # Advanced options
 @click.option('--method', '-m', type=click.Choice(['bm25', 'semantic', 'hybrid', 'bfs']), help='Search method (advanced)')
@@ -114,7 +118,23 @@ def basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, c
         )
         
         # Convert results to dict for formatting, excluding embeddings
-        return [remove_embeddings(edge.model_dump(mode='json')) for edge in results]
+        result_edges = [remove_embeddings(edge.model_dump(mode='json')) for edge in results]
+        if not result_edges:
+            # Fallback to node-hybrid search to surface entity hits when no edges match
+            try:
+                from graphiti_core.search.search_config_recipes import NODE_HYBRID_SEARCH_RRF
+                node_results = await client.search_(
+                    query=query,
+                    config=NODE_HYBRID_SEARCH_RRF,
+                    group_ids=validate_group_ids(group_ids),
+                    search_filter=search_filter,
+                    num_results=max_results
+                )
+                if hasattr(node_results, 'nodes') and node_results.nodes:
+                    return [remove_embeddings(n.model_dump(mode='json')) for n in node_results.nodes]
+            except Exception:
+                pass
+        return result_edges
     
     try:
         results = asyncio.run(run_search())
@@ -183,6 +203,21 @@ def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results
         
         # Convert and optionally sort results, excluding embeddings
         result_dicts = [remove_embeddings(edge.model_dump(mode='json')) for edge in results]
+        if not result_dicts:
+            # Fallback to node-hybrid search
+            try:
+                from graphiti_core.search.search_config_recipes import NODE_HYBRID_SEARCH_RRF
+                node_results = await client.search_(
+                    query=query,
+                    config=NODE_HYBRID_SEARCH_RRF,
+                    group_ids=validate_group_ids(group_ids),
+                    search_filter=search_filter,
+                    num_results=max_results
+                )
+                if hasattr(node_results, 'nodes') and node_results.nodes:
+                    result_dicts = [remove_embeddings(n.model_dump(mode='json')) for n in node_results.nodes]
+            except Exception:
+                pass
         
         if order == 'newest':
             result_dicts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
