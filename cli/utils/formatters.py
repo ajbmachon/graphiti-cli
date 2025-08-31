@@ -32,49 +32,43 @@ def remove_embeddings(data: Dict[str, Any]) -> Dict[str, Any]:
     return clean_data
 
 def simplify_edge(edge_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Simplify edge data to essential fields for AI agent consumption.
-    
-    Returns only the essential fields:
-    - name: The relationship type (e.g., DEPENDS_ON)
-    - fact: The actual relationship information
-    - group_id: Context for the relationship
-    """
     simplified = {}
-    
-    # Essential fields for AI agents
     if 'name' in edge_data:
         simplified['name'] = edge_data['name']
-    
     if 'fact' in edge_data:
         simplified['fact'] = edge_data['fact']
-    
     if 'group_id' in edge_data:
         simplified['group_id'] = edge_data['group_id']
-    
-    # If this is a node result (has 'summary' instead of 'fact')
     if 'summary' in edge_data and 'fact' not in edge_data:
         simplified['summary'] = edge_data['summary']
-        
-    # Include entity_type for nodes
     if 'entity_type' in edge_data:
         simplified['entity_type'] = edge_data['entity_type']
-    
+    if 'score' in edge_data:
+        simplified['score'] = edge_data['score']
+    if 'uuid' in edge_data:
+        simplified['uuid'] = edge_data['uuid']
     return simplified
 
-def format_output(data: Any, format: str = 'json', full_output: bool = False) -> str:
-    """Format output based on requested format
-    
-    Args:
-        data: The data to format
-        format: Output format ('json', 'pretty', 'csv')
-        full_output: If True, show all fields. If False, show simplified output for AI agents.
-    """
-    # Apply simplified format unless full_output is requested
+def format_output(data: Any, format: str = 'json', full_output: bool = False, fields: List[str] | None = None, ids_only: bool = False) -> str:
     if not full_output and isinstance(data, list):
         data = [simplify_edge(item) for item in data]
-    
-    if format == 'json':
+    if ids_only:
+        if isinstance(data, list):
+            data = [item.get('uuid') if isinstance(item, dict) else str(item) for item in data]
+        else:
+            data = [data]
+    if fields and isinstance(data, list):
+        filtered = []
+        for item in data:
+            if isinstance(item, dict):
+                filtered.append({k: item[k] for k in fields if k in item})
+            else:
+                filtered.append(item)
+        data = filtered
+    if format in ('json', 'jsonc'):
         return format_json(data)
+    elif format in ('jsonl', 'ndjson'):
+        return format_jsonl(data)
     elif format == 'pretty':
         return format_pretty(data)
     elif format == 'csv':
@@ -82,8 +76,7 @@ def format_output(data: Any, format: str = 'json', full_output: bool = False) ->
     else:
         raise ValueError(f"Unknown format: {format}")
 
-def format_json(data: Any) -> str:
-    """Format as JSON with datetime and enum handling"""
+def format_jsonl(data: Any) -> str:
     def json_serial(obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -94,8 +87,23 @@ def format_json(data: Any) -> str:
         elif hasattr(obj, 'model_dump'):
             return obj.model_dump()
         raise TypeError(f"Type {type(obj)} not serializable")
-    
-    return json.dumps(data, indent=2, default=json_serial)
+    if isinstance(data, list):
+        return "\n".join(json.dumps(item, separators=(',', ':'), default=json_serial) for item in data)
+    return json.dumps(data, separators=(',', ':'), default=json_serial)
+
+
+def format_json(data: Any) -> str:
+    def json_serial(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, Neo4jDateTime):
+            return obj.iso_format()
+        elif isinstance(obj, Enum):
+            return obj.value
+        elif hasattr(obj, 'model_dump'):
+            return obj.model_dump()
+        raise TypeError(f"Type {type(obj)} not serializable")
+    return json.dumps(data, separators=(',', ':'), default=json_serial)
 
 def format_pretty(data: Any) -> str:
     """Human-readable format for terminal display"""

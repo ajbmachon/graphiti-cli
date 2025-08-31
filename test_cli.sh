@@ -64,5 +64,5 @@ echo "✅ All tests passed! Graphiti CLI is working correctly."
 echo
 echo "Try these commands:"
 echo "  graphiti search \"your query\""
-echo "  graphiti search temporal \"recent changes\" --created-after \"2024-01-01\""
+echo "  graphiti search \"\" --created-after \"2024-01-01\""
 echo "  graphiti maintenance stats"

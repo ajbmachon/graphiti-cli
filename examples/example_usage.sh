@@ -9,7 +9,7 @@ echo "1. Basic search for 'authentication':"
 graphiti search "authentication" --max-results 5
 
 echo -e "\n2. Temporal search - changes in last 7 days:"
-graphiti search temporal "system updates" \
+graphiti search "system updates" \
   --created-after "$(date -d '7 days ago' -Iseconds)" \
   --order newest
 
@@ -24,10 +24,9 @@ graphiti search "UserService" \
   --edge-types IMPLEMENTS_PATTERN
 
 echo -e "\n5. Advanced search with reranking:"
-graphiti search advanced "design patterns" \
+graphiti search "design patterns" \
   --method hybrid \
-  --reranker cross_encoder \
-  --quality-threshold 0.7
+  --reranker cross_encoder
 
 echo -e "\n6. Graph statistics:"
 graphiti maintenance stats

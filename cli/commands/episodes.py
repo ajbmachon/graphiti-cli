@@ -84,7 +84,7 @@ def add_episode(ctx, name, content, source, group_id, entity_types, timestamp, f
     
     try:
         result = asyncio.run(run_add_episode())
-        click.echo(format_output(result, 'json'))
+        click.echo(format_output(result, 'json', full_output=True))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
@@ -94,7 +94,7 @@ def add_episode(ctx, name, content, source, group_id, entity_types, timestamp, f
 @click.option('--last-n', '-n', default=10, help='Number of recent episodes')
 @click.option('--after', type=click.DateTime(), help='Episodes after date')
 @click.option('--before', type=click.DateTime(), help='Episodes before date')
-@click.option('--output', '-o', type=click.Choice(['json', 'pretty']), default='json')
+@click.option('--output', '-o', type=click.Choice(['json', 'jsonc', 'jsonl', 'ndjson', 'pretty']), default='json')
 @click.pass_obj
 def get_episodes(ctx, group_id, last_n, after, before, output):
     """
@@ -141,7 +141,7 @@ def get_episodes(ctx, group_id, last_n, after, before, output):
     
     try:
         results = asyncio.run(run_get_episodes())
-        click.echo(format_output(results, output))
+        click.echo(format_output(results, output, full_output=True))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
@@ -221,7 +221,7 @@ def process_bulk(ctx, file, group_id, batch_size, dry_run):
     
     try:
         results = asyncio.run(run_process_bulk())
-        click.echo(format_output(results, 'json'))
+        click.echo(format_output(results, 'json', full_output=True))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)

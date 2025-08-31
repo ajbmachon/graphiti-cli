@@ -44,8 +44,8 @@ graphiti query "what depends on the payment service?"
 
 # Direct CLI commands
 graphiti search "authentication"
-graphiti search temporal "updates" --created-after "2024-01-01"
-graphiti search advanced "patterns" --method hybrid --reranker cross_encoder
+graphiti search "updates" --created-after "2024-01-01"
+graphiti search "patterns" --method hybrid --reranker cross_encoder
 
 # Graph operations
 graphiti maintenance stats --detailed
@@ -84,9 +84,7 @@ Without this guide, AI agents will miss the advanced semantic capabilities and c
 ## Commands Overview
 
 ### Search Commands
-- `graphiti search` - Basic search with filters
-- `graphiti search temporal` - Time-based queries
-- `graphiti search advanced` - Full configuration control
+- `graphiti search` - Unified search (basic/temporal/advanced by flags)
 
 ### Episode Management
 - `graphiti episodes add` - Add new episodes

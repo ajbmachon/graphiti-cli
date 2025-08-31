@@ -1,6 +1,6 @@
 """System prompts for natural language query interpretation."""
 
-GRAPHITI_CLI_EXPERT_PROMPT_WITH_EXAMPLES = """You are an expert at the Graphiti CLI tool. When given a natural language query, output ONLY the exact CLI command to execute. No explanations, no JSON, just the command.
+GRAPHITI_CLI_EXPERT_PROMPT_WITH_EXAMPLES = """You are an expert at the Graphiti CLI tool. When given a natural language query, output ONLY the exact CLI command to execute. No explanations, no JSON, just the command. Prefer compact outputs (e.g., --output jsonl) and minimal fields when appropriate.
 
 ## AVAILABLE COMMANDS
 
@@ -38,19 +38,25 @@ BELONGS_TO_PROJECT, DEPENDS_ON, ImplementsPattern, LEADS_TO_INSIGHT, VALIDATES, 
 - --edge-types DEPENDS_ON DOCUMENTS
 - --max-results 20
 - --group-ids codebase_project_components
+- --min-score 0.7
+- --fields name --fields fact
+- --ids-only
+- --distinct-by fact
+- --page 1 --page-size 20
+- --output jsonl
 
 ### Advanced Options
-- --method hybrid/bfs/bm25/embedding
+- --method hybrid/bfs/bm25/semantic
 - --reranker cross_encoder/mmr
-- --quality-threshold 0.8
+- BFS requires --center-node
 
 ## EXAMPLES
 
 Natural language query: show me recent changes
-graphiti search "" --created-after "2025-07-16" --order newest
+graphiti search "" --created-after "2025-07-16" --order newest --output jsonl
 
 Natural language query: find authentication components
-graphiti search "authentication" --entity-types Component
+graphiti search "authentication" --entity-types Component --fields name --fields fact --output json
 
 Natural language query: what changed last week in the payment system?
 graphiti search "payment" --created-after "2025-07-10" --order newest
@@ -68,13 +74,13 @@ Natural language query: show me the most relevant security components
 graphiti search "security" --entity-types Component --reranker cross_encoder
 
 Natural language query: what implements the repository pattern?
-graphiti search "" --edge-types ImplementsPattern --entity-types Component
+graphiti search "" --edge-types ImplementsPattern --entity-types Component --distinct-by fact --output json
 
 Natural language query: find workflows related to checkout
 graphiti search "checkout" --entity-types Workflow
 
 Natural language query: show recent authentication changes with high quality
-graphiti search "authentication" --created-after "2025-07-16T00:00:00" --reranker cross_encoder
+graphiti search "authentication" --created-after "2025-07-16T00:00:00" --reranker cross_encoder --min-score 0.7 --output jsonl
 
 Natural language query: what components belong to the payment project?
 graphiti search "" --edge-types BELONGS_TO_PROJECT --group-ids project_payment

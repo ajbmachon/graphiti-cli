@@ -10,8 +10,6 @@ class CommandExecutor:
     # Commands that are safe to execute
     SAFE_COMMANDS = {
         'graphiti search',
-        'graphiti search temporal', 
-        'graphiti search advanced',
         'graphiti episodes get',
         'graphiti maintenance stats',
         'graphiti maintenance export',

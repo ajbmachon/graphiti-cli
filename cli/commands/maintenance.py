@@ -16,7 +16,7 @@ def maintenance_group():
 @maintenance_group.command(name='build-communities')
 @click.option('--group-ids', '-g', multiple=True, help='Groups to process')
 @click.option('--algorithm', '-a', type=click.Choice(['label_propagation']), default='label_propagation')
-@click.option('--output', '-o', type=click.Choice(['json', 'pretty']), default='json')
+@click.option('--output', '-o', type=click.Choice(['json', 'jsonc', 'jsonl', 'ndjson', 'pretty']), default='json')
 @click.pass_obj
 def build_communities(ctx, group_ids, algorithm, output):
     """
@@ -160,7 +160,7 @@ def export_graph(ctx, group_ids, format, include_embeddings, output_file):
 @maintenance_group.command(name='stats')
 @click.option('--group-ids', '-g', multiple=True, help='Groups to analyze')
 @click.option('--detailed', '-d', is_flag=True, help='Show detailed statistics')
-@click.option('--output', '-o', type=click.Choice(['json', 'pretty']), default='pretty')
+@click.option('--output', '-o', type=click.Choice(['json', 'jsonc', 'jsonl', 'ndjson', 'pretty']), default='json')
 @click.pass_obj
 def graph_stats(ctx, group_ids, detailed, output):
     """

@@ -31,10 +31,10 @@ This is designed for single-shot queries where Claude translates natural languag
 
 ```bash
 # Recent changes (last 24 hours)
-graphiti search temporal "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest
+graphiti search "" --created-after "$(date -d '24 hours ago' -Iseconds)" --order newest
 
 # High-quality search with reranking
-graphiti search advanced "query" --method hybrid --reranker cross_encoder
+graphiti search "query" --method hybrid --reranker cross_encoder
 
 # Find dependencies
 graphiti search "component" --edge-types DEPENDS_ON

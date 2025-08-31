@@ -18,52 +18,58 @@ def validate_threshold(value: float, name: str = "threshold") -> float:
     return value
 
 def validate_group_ids(group_ids: tuple) -> list:
-    """Convert and validate group IDs"""
     if not group_ids:
         return None
-    return list(group_ids)
+    return [str(g).strip() for g in list(group_ids)]
 
 def validate_entity_types(entity_types: tuple) -> list:
-    """Convert and validate entity types"""
     if not entity_types:
         return None
-    
-    # Known entity types from MCP implementation
-    valid_types = {
-        'Requirement', 'Preference', 'Procedure', 'Project', 
+    valid_types = [
+        'Requirement', 'Preference', 'Procedure', 'Project',
         'Component', 'Pattern', 'Insight', 'Workflow', 'Agent',
-        'ValidationPoint', 'LimitationPattern', 'PromptTemplate', 
+        'ValidationPoint', 'LimitationPattern', 'PromptTemplate',
         'DomainConcept'
-    }
-    
-    types = list(entity_types)
-    invalid = [t for t in types if t not in valid_types]
+    ]
+    lookup = {t.lower(): t for t in valid_types}
+    normalized = []
+    invalid = []
+    for t in list(entity_types):
+        key = str(t).strip().lower()
+        if key in lookup:
+            normalized.append(lookup[key])
+        else:
+            invalid.append(str(t))
     if invalid:
         raise click.ClickException(
             f"Invalid entity types: {', '.join(invalid)}. "
-            f"Valid types: {', '.join(sorted(valid_types))}"
+            f"Valid types: {', '.join(valid_types)}"
         )
-    return types
+    return normalized
 
 def validate_edge_types(edge_types: tuple) -> list:
-    """Convert and validate edge types"""
     if not edge_types:
         return None
-    
-    # Known edge types from MCP implementation
-    valid_types = {
+    valid_types = [
         'BELONGS_TO_PROJECT', 'DEPENDS_ON', 'ImplementsPattern',
         'LEADS_TO_INSIGHT', 'VALIDATES', 'TRIGGERS_LIMITATION',
         'COORDINATES_WITH', 'ANALYZES_COMPONENT', 'EVOLVES_FROM',
         'APPLIES_TO', 'FOLLOWS_WORKFLOW', 'PRECEDES_IN_WORKFLOW',
         'DOCUMENTS', 'REFERENCES'
-    }
-    
-    types = list(edge_types)
-    invalid = [t for t in types if t not in valid_types]
+    ]
+    # Case-insensitive lookup, preserving canonical casing
+    lookup = {t.lower(): t for t in valid_types}
+    normalized = []
+    invalid = []
+    for t in list(edge_types):
+        key = str(t).strip().lower()
+        if key in lookup:
+            normalized.append(lookup[key])
+        else:
+            invalid.append(str(t))
     if invalid:
         raise click.ClickException(
             f"Invalid edge types: {', '.join(invalid)}. "
-            f"Valid types: {', '.join(sorted(valid_types))}"
+            f"Valid types: {', '.join(valid_types)}"
         )
-    return types
+    return normalized

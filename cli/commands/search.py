@@ -37,12 +37,18 @@ from ..utils.validators import (
 @click.option('--method', '-m', type=click.Choice(['bm25', 'semantic', 'hybrid', 'bfs']), help='Search method (advanced)')
 @click.option('--reranker', '-r', type=click.Choice(['none', 'cross_encoder', 'mmr']), help='Reranking strategy (advanced)')
 # Output
-@click.option('--output', '-o', type=click.Choice(['json', 'pretty', 'csv']), default='json', help='Output format')
+@click.option('--output', '-o', type=click.Choice(['json', 'jsonc', 'jsonl', 'ndjson', 'pretty', 'csv']), default='json', help='Output format')
 @click.option('--full-output', '-f', is_flag=True, help='Show all fields (default: simplified output for AI agents)')
+@click.option('--min-score', type=float, help='Filter by minimum relevance score (0.0-1.0)')
+@click.option('--fields', multiple=True, help='Restrict output to specified fields (repeatable)')
+@click.option('--ids-only', is_flag=True, help='Output only UUIDs when available')
+@click.option('--distinct-by', type=click.Choice(['fact', 'uuid']), help='De-duplicate results by field')
+@click.option('--page', type=int, default=1, help='Page number (1-based)')
+@click.option('--page-size', type=int, default=0, help='Results per page (0=all)')
 @click.pass_obj
 def search_command(ctx, query, group_ids, entity_types, edge_types, max_results, center_node,
                   created_after, created_before, order,
-                  method, reranker, output, full_output):
+                  method, reranker, output, full_output, min_score, fields, ids_only, distinct_by, page, page_size):
     """Search the knowledge graph.
     
     By default, returns simplified output optimized for AI agents (name, fact, group_id only).
@@ -70,20 +76,19 @@ def search_command(ctx, query, group_ids, entity_types, edge_types, max_results,
         # Combined filters
         graphiti search "user service" --group-ids project_x --entity-types Component
     """
+    if min_score is not None:
+        validate_threshold(min_score, 'min-score')
     # Determine search mode based on options
     has_temporal = created_after or created_before
     has_advanced = method or reranker
     
     if has_advanced:
-        # Advanced search mode (can include temporal filters)
         advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                       created_after, created_before, order, method, reranker, output, full_output)
+                       created_after, created_before, order, method, reranker, output, full_output, center_node)
     elif has_temporal:
-        # Temporal search without advanced features
         temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                       created_after, created_before, order, output, full_output)
+                       created_after, created_before, order, output, full_output, center_node)
     else:
-        # Basic search
         basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, 
                     center_node, output, full_output)
 
@@ -113,13 +118,38 @@ def basic_search(ctx, query, group_ids, entity_types, edge_types, max_results, c
     
     try:
         results = asyncio.run(run_search())
-        click.echo(format_output(results, output, full_output=full_output))
+        params = click.get_current_context().params
+        ms = params.get('min_score')
+        if ms is not None:
+            results = [r for r in results if r.get('score') is not None and r['score'] >= ms]
+        db = params.get('distinct_by')
+        if db:
+            seen = set()
+            deduped = []
+            for r in results:
+                k = r.get(db)
+                if k is None:
+                    deduped.append(r)
+                    continue
+                if k in seen:
+                    continue
+                seen.add(k)
+                deduped.append(r)
+            results = deduped
+        pg = int(params.get('page') or 1)
+        ps = int(params.get('page_size') or 0)
+        if ps and ps > 0 and pg > 0:
+            start = (pg - 1) * ps
+            results = results[start:start+ps]
+        flds = list(params.get('fields') or [])
+        ids_only = bool(params.get('ids_only'))
+        click.echo(format_output(results, output, full_output=full_output, fields=flds or None, ids_only=ids_only))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
 
 def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                   created_after, created_before, order, output, full_output):
+                   created_after, created_before, order, output, full_output, center_node):
     """Temporal search with date filtering."""
     validate_date_range(created_after, created_before, "created")
     
@@ -147,7 +177,8 @@ def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results
             query=query,
             group_ids=validate_group_ids(group_ids),
             num_results=max_results,
-            search_filter=search_filter
+            search_filter=search_filter,
+            center_node_uuid=center_node
         )
         
         # Convert and optionally sort results, excluding embeddings
@@ -162,13 +193,38 @@ def temporal_search(ctx, query, group_ids, entity_types, edge_types, max_results
     
     try:
         results = asyncio.run(run_temporal())
-        click.echo(format_output(results, output, full_output=full_output))
+        params = click.get_current_context().params
+        ms = params.get('min_score')
+        if ms is not None:
+            results = [r for r in results if r.get('score') is not None and r['score'] >= ms]
+        db = params.get('distinct_by')
+        if db:
+            seen = set()
+            deduped = []
+            for r in results:
+                k = r.get(db)
+                if k is None:
+                    deduped.append(r)
+                    continue
+                if k in seen:
+                    continue
+                seen.add(k)
+                deduped.append(r)
+            results = deduped
+        pg = int(params.get('page') or 1)
+        ps = int(params.get('page_size') or 0)
+        if ps and ps > 0 and pg > 0:
+            start = (pg - 1) * ps
+            results = results[start:start+ps]
+        flds = list(params.get('fields') or [])
+        ids_only = bool(params.get('ids_only'))
+        click.echo(format_output(results, output, full_output=full_output, fields=flds or None, ids_only=ids_only))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
 
 def advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results,
-                   created_after, created_before, order, method, reranker, output, full_output):
+                   created_after, created_before, order, method, reranker, output, full_output, center_node):
     """Advanced search with reranking and optional temporal filters."""
     validate_date_range(created_after, created_before, "created")
     
@@ -191,20 +247,27 @@ def advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results
             edge_types=validate_edge_types(edge_types)
         )
         
-        # Select search config
+        if method == 'bfs' and center_node:
+            basic = await client.search(
+                query=query,
+                group_ids=validate_group_ids(group_ids),
+                num_results=max_results,
+                center_node_uuid=center_node,
+                search_filter=search_filter
+            )
+            return [remove_embeddings(edge.model_dump(mode='json')) for edge in basic]
         if reranker == 'cross_encoder':
             search_config = COMBINED_HYBRID_SEARCH_CROSS_ENCODER
         elif reranker == 'mmr':
             search_config = EDGE_HYBRID_SEARCH_MMR
         else:
             search_config = EDGE_HYBRID_SEARCH_RRF
-        
-        # Use advanced search with config
         results = await client.search_(
             query=query,
             config=search_config,
             group_ids=validate_group_ids(group_ids),
-            search_filter=search_filter
+            search_filter=search_filter,
+            num_results=max_results
         )
         
         # Extract edges from SearchResults
@@ -219,11 +282,39 @@ def advanced_search(ctx, query, group_ids, entity_types, edge_types, max_results
         elif order == 'oldest':
             result_dicts.sort(key=lambda x: x.get('created_at', ''))
         
+        if max_results and isinstance(max_results, int) and max_results > 0:
+            result_dicts = result_dicts[:max_results]
+        
         return result_dicts
     
     try:
         results = asyncio.run(run_advanced())
-        click.echo(format_output(results, output, full_output=full_output))
+        params = click.get_current_context().params
+        ms = params.get('min_score')
+        if ms is not None:
+            results = [r for r in results if r.get('score') is not None and r['score'] >= ms]
+        db = params.get('distinct_by')
+        if db:
+            seen = set()
+            deduped = []
+            for r in results:
+                k = r.get(db)
+                if k is None:
+                    deduped.append(r)
+                    continue
+                if k in seen:
+                    continue
+                seen.add(k)
+                deduped.append(r)
+            results = deduped
+        pg = int(params.get('page') or 1)
+        ps = int(params.get('page_size') or 0)
+        if ps and ps > 0 and pg > 0:
+            start = (pg - 1) * ps
+            results = results[start:start+ps]
+        flds = list(params.get('fields') or [])
+        ids_only = bool(params.get('ids_only'))
+        click.echo(format_output(results, output, full_output=full_output, fields=flds or None, ids_only=ids_only))
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)

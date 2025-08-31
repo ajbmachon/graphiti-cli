@@ -1,6 +1,7 @@
 """Natural language query interface for Graphiti CLI."""
 import click
 import anyio
+import sys
 from ..query.session import QuerySession
 
 
@@ -11,8 +12,9 @@ from ..query.session import QuerySession
 @click.option('--temperature', default=0.2, help='Claude temperature (0.0-1.0)')
 @click.option('--history', is_flag=True, help='Show query history')
 @click.option('--clear-history', is_flag=True, help='Clear query history')
+@click.option('--quiet', '-q', is_flag=True, help='Suppress non-result output')
 @click.pass_context
-def query_command(ctx, query, interactive, dry_run, temperature, history, clear_history):
+def query_command(ctx, query, interactive, dry_run, temperature, history, clear_history, quiet):
     """Natural language interface to Graphiti.
     
     Examples:
@@ -21,6 +23,8 @@ def query_command(ctx, query, interactive, dry_run, temperature, history, clear_
         graphiti query --interactive
     """
     session = QuerySession(temperature=temperature)
+    if not quiet and not sys.stdout.isatty():
+        quiet = True
     
     if clear_history:
         session.clear_history()
@@ -32,29 +36,38 @@ def query_command(ctx, query, interactive, dry_run, temperature, history, clear_
         return
     
     if interactive or not query:
-        anyio.run(run_interactive, session, dry_run)
+        anyio.run(run_interactive, session, dry_run, quiet)
     else:
-        anyio.run(run_single_query, session, query, dry_run)
+        anyio.run(run_single_query, session, query, dry_run, quiet)
 
 
-async def run_single_query(session: QuerySession, query: str, dry_run: bool):
-    """Execute a single query."""
-    click.echo(f"🔍 Processing: {query}")
-    
+async def run_single_query(session: QuerySession, query: str, dry_run: bool, quiet: bool):
+    if not quiet:
+        click.echo(f"🔍 Processing: {query}")
     command, success, output = await session.process_query(query, dry_run)
-    
+    if dry_run:
+        if quiet:
+            click.echo(command)
+        else:
+            click.echo(f"\n📋 Command: {command}")
+        return
+    if quiet:
+        if success:
+            click.echo(output)
+        else:
+            click.echo(output, err=True)
+        return
     click.echo(f"\n📋 Command: {command}")
-    
     if success:
         click.echo(f"\n✓ Output:\n{output}")
     else:
         click.echo(f"\n✗ Error: {output}", err=True)
 
 
-async def run_interactive(session: QuerySession, dry_run: bool):
-    """Run interactive mode."""
-    click.echo("🤖 Graphiti Natural Language Interface")
-    click.echo("   Type 'exit' to quit, 'help' for tips\n")
+async def run_interactive(session: QuerySession, dry_run: bool, quiet: bool):
+    if not quiet:
+        click.echo("🤖 Graphiti Natural Language Interface")
+        click.echo("   Type 'exit' to quit, 'help' for tips\n")
     
     while True:
         try:
@@ -68,8 +81,9 @@ async def run_interactive(session: QuerySession, dry_run: bool):
                 show_help()
                 continue
             
-            await run_single_query(session, query, dry_run)
-            click.echo()  # Add spacing between queries
+            await run_single_query(session, query, dry_run, quiet)
+            if not quiet:
+                click.echo()
             
         except (EOFError, KeyboardInterrupt):
             click.echo("\n👋 Goodbye!")

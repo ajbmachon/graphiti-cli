@@ -13,7 +13,7 @@ The CLI now includes a natural language query interface powered by Claude:
 graphiti query "show me recent authentication changes"
 
 # Interactive mode for conversations
-graphiti query --interactive
+graphiti query --interactive --quiet
 
 # See what command would be executed
 graphiti query "find patterns in the payment system" --dry-run
@@ -322,7 +322,7 @@ graphiti maintenance stats --group-ids old_project
 ### Combine with jq
 ```bash
 # Complex analysis pipeline
-graphiti search temporal "" --created-after "2024-01-01" |
+graphiti search "" --created-after "2024-01-01" |
   jq '.[] | select(.type == "Component") | .name' |
   sort | uniq -c | sort -nr
 ```
@@ -332,7 +332,7 @@ graphiti search temporal "" --created-after "2024-01-01" |
 # Find and analyze components
 graphiti search "service" --entity-types Component |
   jq -r '.[] | .uuid' |
-  xargs -I {} graphiti search advanced "" --center-node {} --method bfs
+  xargs -I {} graphiti search "" --center-node {} --method bfs
 ```
 
 ## Troubleshooting
