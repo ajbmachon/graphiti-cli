@@ -13,6 +13,9 @@ class ClientContext:
     def get_client(self) -> Graphiti:
         """Get or create a Graphiti client instance using environment variables"""
         if self._client is None:
+            # Disable Graphiti telemetry by default unless explicitly enabled
+            if os.environ.get('GRAPHITI_TELEMETRY_ENABLED') is None:
+                os.environ['GRAPHITI_TELEMETRY_ENABLED'] = 'false'
             uri = os.environ.get('NEO4J_URI', 'bolt://localhost:7687')
             user = os.environ.get('NEO4J_USER', 'neo4j')
             password = os.environ.get('NEO4J_PASSWORD')
