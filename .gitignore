@@ -47,3 +47,8 @@ test_output/
 
 # Logs
 *.log
+
+# Editor artifacts
+.cursor/
+.kilocode/
+.roo/
